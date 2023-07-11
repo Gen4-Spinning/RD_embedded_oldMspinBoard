@@ -29,7 +29,7 @@ typedef struct machineSettings_Struct{
     int tpi;
     int packageHeight;
     float diaBuildFactor;
-    int windingOffsetCoils;
+    float windingOffsetCoils;
     int windingClosenessFactor;
 
 }machineSettingsTypeDef;
@@ -70,6 +70,8 @@ typedef struct ringDoublerParameters{
 	float yarnWeightinGramsPerBobbin ;
 
 	float maxBobbinDia;
+	uint16_t strokeNoLeft;
+	uint16_t strokeNoRight;
 }ringDoubler;
 
 extern machineSettingsTypeDef ms;

@@ -55,6 +55,11 @@ void RunState(void){
 			// prepare the Run packet Structure for the HMI
 			UpdateBasePacket_Modes(CURRENT_MACHINE,HMI_SCREEN_DATA,HMI_RUN_SCREEN,HMI_RUN_NORMAL,HMI_RUN_PACKET_LENGTH_RF,2);
 			UpdateRunPacket_RF(HMI_RF_SPINDLESPEED,fsp.spindleSpeed,HMI_RF_DOFFPERCENT,doffPercent);
+
+			TowerLamp(GREEN_ON); // GREEN ON
+			TowerLamp(AMBER_OFF); // AMBER OFF
+			TowerLamp(RED_OFF); //RED OFF
+
 			S.changeRunMode = 0;
 			S.first_enter = 0;
 		}
@@ -86,10 +91,6 @@ void RunState(void){
 			ResetEncoderVariables(&encs);
 			MotorDrive(ENABLE_D);
 
-			TowerLamp(GREEN_ON); // GREEN ON
-			TowerLamp(AMBER_OFF); // AMBER OFF
-			TowerLamp(RED_OFF); //RED OFF
-					
 			// logic variables
 			allMotorsOn = 1;
 			stopSecondaryMotor= 0; //

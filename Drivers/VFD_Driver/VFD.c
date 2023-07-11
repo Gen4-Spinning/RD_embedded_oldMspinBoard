@@ -27,13 +27,13 @@ void VFD_setSpindleSpeed(VFD *v,uint8_t spindlespeed_define){
 		v->rampTime_sec = 40;
 		v->maxRPM = 8000;
 	}
+	if (v->VFD_setting == SPINDLE_SPEED_9000){
+		v->rampTime_sec = 45;
+		v->maxRPM = 9000;
+	}
 	if (v->VFD_setting == SPINDLE_SPEED_10000){
 		v->rampTime_sec = 50;
-		v->maxRPM = 8000;
-	}
-	if (v->VFD_setting == SPINDLE_SPEED_12000){
-		v->rampTime_sec = 60;
-		v->maxRPM = 12000;
+		v->maxRPM = 10000;
 	}
 	v->rampRate = v->maxRPM/(v->rampTime_sec *10);
 }
@@ -49,13 +49,13 @@ void VFD_startInductionMotor(VFD *v){
 		HAL_GPIO_WritePin(OUT4_GPIO_Port, OUT4_Pin, GPIO_PIN_RESET); 	//MI1
 		HAL_GPIO_WritePin(OUT5_GPIO_Port, OUT5_Pin, GPIO_PIN_SET); //MI2
 		HAL_GPIO_WritePin(OUT6_GPIO_Port, OUT6_Pin, GPIO_PIN_RESET); //MI3
-	}else if (v->VFD_setting == SPINDLE_SPEED_10000){
+	}else if (v->VFD_setting == SPINDLE_SPEED_9000){
 		HAL_GPIO_WritePin(OUT3_GPIO_Port, OUT3_Pin, GPIO_PIN_SET); // Start command
 		HAL_GPIO_WritePin(OUT4_GPIO_Port, OUT4_Pin, GPIO_PIN_SET); //MI1
 		HAL_GPIO_WritePin(OUT5_GPIO_Port, OUT5_Pin, GPIO_PIN_SET); //MI2
 		HAL_GPIO_WritePin(OUT6_GPIO_Port, OUT6_Pin, GPIO_PIN_RESET); //MI3
 	}
-	else if (v->VFD_setting == SPINDLE_SPEED_12000){
+	else if (v->VFD_setting == SPINDLE_SPEED_10000){
 		HAL_GPIO_WritePin(OUT3_GPIO_Port, OUT3_Pin, GPIO_PIN_SET); // Start command
 		HAL_GPIO_WritePin(OUT4_GPIO_Port, OUT4_Pin, GPIO_PIN_RESET); 	//MI1
 		HAL_GPIO_WritePin(OUT5_GPIO_Port, OUT5_Pin, GPIO_PIN_RESET); //MI2

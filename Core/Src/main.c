@@ -220,7 +220,6 @@ void Winding_RIGHT(int step,int length){ // for RIGHT SIDE
 	if(pulseCount1 >= length ){
 		pulseCount1 = 0;
 		directionChange = directionChange * -1;
-		chaseCount++;
 	}
 }
 
@@ -235,6 +234,7 @@ void Binding_RIGHT(int step,int length){ // for RIGHT SIDE
 		pulseCount1 = 0;
 		directionChange = directionChange * -1;
 		chaseCount++;
+		rd.strokeNoRight++;
 	}
 }
 
@@ -261,6 +261,7 @@ void Binding_LEFT(int step,int length){
 	if(pulseCount2 >= length){
 		pulseCount2 = 0;
 		directionChange1 = directionChange1 * -1;
+		rd.strokeNoLeft++;
 	}
 }
 
@@ -399,7 +400,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  {
 				
 	   if(allMotorsOn == 1){
 		   LedToggle(LED3);
-		   actualSpindleSpeed = (int)(M[MOTOR1].presentRpm * 10.92)/3.42;//CHECK
+		   actualSpindleSpeed = vfd.presentRPM;//CHECK
 		   if(startFlag == 1){
 			   calculateSpindleMotorSpeed(&vfd,1);
 			   ContinuousRDCalculations(&ms,&rd);
@@ -537,14 +538,14 @@ int main(void)
   ReadOldDoffSettingsFromEeprom();
 
   //Setup the ms parameters
-  ms.inputYarnCountNe = 20;
-  ms.outputYarnDia = 0.40;
+  ms.inputYarnCountNe = 30;
+  ms.outputYarnDia = 0.31;
   ms.packageHeight = 200;
   ms.spindleSpeed= 8000;
-  ms.diaBuildFactor = 0.12;
-  ms.tpi = 14;
+  ms.diaBuildFactor = 0.6;
+  ms.tpi = 20;
   ms.windingClosenessFactor = 108;
-  ms.windingOffsetCoils = 2;
+  ms.windingOffsetCoils = 1.5;
 
   VFD_setSpindleSpeed(&vfd, SPINDLE_SPEED_8000); //set this based on settings
   SetupRDCalculations(&ms,&rd);

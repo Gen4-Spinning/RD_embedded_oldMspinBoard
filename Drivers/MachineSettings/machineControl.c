@@ -70,7 +70,7 @@ void SetupRDCalculations(machineSettingsTypeDef *ms,ringDoubler *rd){
 
 	//WE calculate all these params, but we use the dia set by the user
 	rd->ht_difference_perStroke = (ms->windingOffsetCoils * ms->outputYarnDia * windingClosenessFactor_float)/ms->diaBuildFactor;
-	rd->windingOffsetPulse = rd->ht_difference_perStroke * 100;
+	rd->windingOffsetPulse = (uint16_t)(rd->ht_difference_perStroke * 100);
 
 	//needed to check if length has been reached
 	rd->windingStrokePps = (CHASEHEIGHT*100);
@@ -90,5 +90,6 @@ void SetupRDCalculations(machineSettingsTypeDef *ms,ringDoubler *rd){
 	rd->yarnWeightinGramsPerBobbin = rd->totalYarnLengthInMtrsPerBobbin/rd->outputYarnCountNm;
 
 	rd->maxBobbinDia = rd->strokesPerDoff * 2 * windingClosenessFactor_float * ms->outputYarnDia + AVERAGE_BOBBIN_DIA;
-
+	rd->strokeNoLeft = 0;
+	rd->strokeNoRight = 0;
 }
