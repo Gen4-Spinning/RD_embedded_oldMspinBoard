@@ -7,7 +7,7 @@
 #include "stm32f4xx_hal.h"
 #include "functionDefines.h"
 #include "logicDefines.h"
-
+#include "VFD.h"
 #include "../../Drivers/Encoder/encoder.h"
 
 extern UART_HandleTypeDef huart4;
@@ -45,8 +45,8 @@ void HomingState(void)
 	while(1){
 		if (S.first_enter ==1){ // is only used for sending RPI info
 			// create the run packet for the HMI
-			UpdateBasePacket_Modes(CURRENT_MACHINE,HMI_SCREEN_DATA,HMI_RUN_SCREEN,HMI_RUN_HOMING,HMI_RUN_PACKET_LENGTH_RF,2);
-			UpdateRunPacket_RF(HMI_RF_SPINDLESPEED,fsp.spindleSpeed,HMI_RF_DOFFPERCENT,doffPercent);
+			UpdateBasePacket_Modes(CURRENT_MACHINE,HMI_SCREEN_DATA,HMI_RUN_SCREEN,HMI_RUN_HOMING,HMI_RUN_PACKET_LENGTH_RF,3);
+			UpdateRunPacket_RF(HMI_RF_SPINDLESPEED,vfd.presentRPM,HMI_RD_LEFT_DOFFPERCENT,rd.doffPercentLeft,HMI_RD_RIGHT_DOFFPERCENT,rd.doffPercentRight);
 													
 			homing_Calib_State = DOWN;
 			homing_Normal_StateFront = DOWN;  //changed from off to down
@@ -67,7 +67,7 @@ void HomingState(void)
 
 		// every sec, send a Homing screen(if you send it once, if it fails your gone)
 		if( (U.TXtransfer == 1)	&& (U.TXcomplete == 1)){
-				sizeofPacket = UpdateRunPacketString_RF(BufferTransmit,hsb,hrp,fsp.spindleSpeed,doffPercent);
+				sizeofPacket = UpdateRunPacketString_RF(BufferTransmit,hsb,hrp,vfd.presentRPM,rd.doffPercentLeft,rd.doffPercentRight);
 				HAL_UART_Transmit_IT(&huart1, (uint8_t *)&BufferTransmit, sizeofPacket);
 				U.TXcomplete = 0;
 				U.TXtransfer = 0;
@@ -81,56 +81,49 @@ void HomingState(void)
 							
 															
 		//Logic for FRONT SIDE (LEFT)
-		if (RunRight == 1){
-			if (homing_Normal_StateFront == DOWN){
-				HAL_GPIO_WritePin(GPIOA,STP1_DIR_Pin,GPIO_PIN_RESET); //direction DOWN
-				homeFlag = 1;
-				btm_bed_reachedFront = InputSensor1();
-				pulseCount1 = 0; // keepmaking this zero so that they dont trigger a dir change
+		if (homing_Normal_StateFront == DOWN){
+			HAL_GPIO_WritePin(GPIOA,STP1_DIR_Pin,GPIO_PIN_RESET); //direction DOWN
+			homeFlag = 1;
+			btm_bed_reachedFront = InputSensor1();
+			pulseCount1 = 0; // keepmaking this zero so that they dont trigger a dir change
 
-				if (btm_bed_reachedFront == 1){
-					//Reverse Direction
-					HAL_GPIO_WritePin(GPIOA,STP1_DIR_Pin,GPIO_PIN_SET);
-					homing_Normal_StateFront = UP;
-					}
+			if (btm_bed_reachedFront == 1){
+				//Reverse Direction
+				HAL_GPIO_WritePin(GPIOA,STP1_DIR_Pin,GPIO_PIN_SET);
+				homing_Normal_StateFront = UP;
 				}
-
-				if (homing_Normal_StateFront == UP){
-					if (pulseCount1 >= 750){ // HARDCODED DISTANCE
-						homing_Normal_StateFront = OFF;
-						HAL_TIM_PWM_Stop(&htim5,TIM_CHANNEL_4);
-						pulseCount1 = 0;
-					}
-				}
-			}else{
-				homing_Normal_StateFront = OFF;
 			}
-							
+
+			if (homing_Normal_StateFront == UP){
+				if (pulseCount1 >= 750){ // HARDCODED DISTANCE
+					homing_Normal_StateFront = OFF;
+					HAL_TIM_PWM_Stop(&htim5,TIM_CHANNEL_4);
+					pulseCount1 = 0;
+				}
+			}
+		//--------------------------
+
 		//Logic for BACK SIDE
-		if (RunLeft == 1){
-			if (homing_Normal_StateBack == DOWN){
-				HAL_GPIO_WritePin(STP2_DIR_NEW_GPIO_Port,STP2_DIR_NEW_Pin,GPIO_PIN_RESET); //direction DOWN
-				homeFlag = 1;
-				btm_bed_reachedBack = InputSensor2();
-				pulseCount2 = 0; // keepmaking this zero so that they dont trigger a dir change
+		if (homing_Normal_StateBack == DOWN){
+			HAL_GPIO_WritePin(STP2_DIR_NEW_GPIO_Port,STP2_DIR_NEW_Pin,GPIO_PIN_RESET); //direction DOWN
+			homeFlag = 1;
+			btm_bed_reachedBack = InputSensor2();
+			pulseCount2 = 0; // keepmaking this zero so that they dont trigger a dir change
 
-				if (btm_bed_reachedBack == 1){
-					//Reverse Direction
-					HAL_GPIO_WritePin(STP2_DIR_NEW_GPIO_Port,STP2_DIR_NEW_Pin,GPIO_PIN_SET);
-					homing_Normal_StateBack = UP;
-					}
+			if (btm_bed_reachedBack == 1){
+				//Reverse Direction
+				HAL_GPIO_WritePin(STP2_DIR_NEW_GPIO_Port,STP2_DIR_NEW_Pin,GPIO_PIN_SET);
+				homing_Normal_StateBack = UP;
 				}
+			}
 
-				if (homing_Normal_StateBack == UP)
-				{
-					if (pulseCount2 >= 750){ // HARDCODED DISTANCE WRT SENSOR LOC
-						homing_Normal_StateBack = OFF;
-						HAL_TIM_PWM_Stop(&htim13,TIM_CHANNEL_1);
-						pulseCount2 = 0;
-					}
+			if (homing_Normal_StateBack == UP)
+			{
+				if (pulseCount2 >= 750){ // HARDCODED DISTANCE WRT SENSOR LOC
+					homing_Normal_StateBack = OFF;
+					HAL_TIM_PWM_Stop(&htim13,TIM_CHANNEL_1);
+					pulseCount2 = 0;
 				}
-			}else{
-				homing_Normal_StateBack = OFF;
 			}
 
 			if ((homing_Normal_StateBack == OFF) && (homing_Normal_StateFront == OFF)){
@@ -140,6 +133,8 @@ void HomingState(void)
 				hommingFlag = 0;
 				HAL_Delay(500);
 			}
+
+			//----------------------
 
 						
 			if (S.state_change == TO_IDLE){

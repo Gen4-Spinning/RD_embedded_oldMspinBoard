@@ -5,40 +5,40 @@
  *      Author: harsha
  */
 
-/*
-#include "Eeprom.h"
-#include "machineSettings.h"
+
+#include "eeprom.h"
+#include "machineControl.h"
 #include "machineEepromSettings.h"
 
 void ReadMachineSettingsFromEeprom(machineSettingsTypeDef *m){
-	m->inputYarnCountNe = EE_ReadInteger(RD_INPUT_YARN_COUNT_NE_ADDR);
-	m->outputYarnDia  = EE_ReadFloat(RD_OUTPUT_YARN_DIA_ADDR);
-	m->spindleSpeed = EE_ReadInteger(RD_SPINDLESPEED_ADDR);
-	m->tpi = EE_ReadInteger(RD_TPI_ADDR);
-	m->packageHeight = EE_ReadInteger(RD_PACKAGE_HEIGHT_ADDR);
-	m->windingClosenessFactor = EE_ReadInteger(RD_WINDINGCLOSENESSFACTOR_ADDR);
-	m->windingOffsetCoils = EE_ReadInteger(RD_WINDINGOFFSET_COILS_ADDR);
-	m->diaBuildFactor = EE_ReadFloat(RD_DIA_BUILD_FACTOR_ADDR);
+	m->inputYarnCountNe = EepromReadInt(RD_INPUT_YARN_COUNT_NE_ADDR);
+	m->outputYarnDia  = EepromReadInt(RD_OUTPUT_YARN_DIA_ADDR)/100.0;
+	m->spindleSpeed = EepromReadInt(RD_SPINDLESPEED_ADDR);
+	m->tpi = EepromReadInt(RD_TPI_ADDR);
+	m->packageHeight = EepromReadInt(RD_PACKAGE_HEIGHT_ADDR);
+	m->windingClosenessFactor = EepromReadInt(RD_WINDINGCLOSENESSFACTOR_ADDR);
+	m->windingOffsetCoils = EepromReadInt(RD_WINDINGOFFSET_COILS_ADDR)/100.0;
+	m->diaBuildFactor = EepromReadInt(RD_DIA_BUILD_FACTOR_ADDR)/100.0;
 }
 
 
 uint8_t WriteMachineSettingsIntoEeprom(machineSettingsTypeDef *m){
 	uint8_t dataWritten = 0;
-    dataWritten += EE_WriteInteger(m->inputYarnCountNe,RD_INPUT_YARN_COUNT_NE_ADDR);
+    dataWritten += EepromWriteInt2(RD_INPUT_YARN_COUNT_NE_ADDR,m->inputYarnCountNe);
     HAL_Delay(2);
-    dataWritten += EE_WriteFloat(m->outputYarnDia,RD_OUTPUT_YARN_DIA_ADDR);
+    dataWritten += EepromWriteInt2(RD_OUTPUT_YARN_DIA_ADDR,(uint16_t)(m->outputYarnDia*100));
     HAL_Delay(2);
-    dataWritten += EE_WriteInteger(m->spindleSpeed,RD_SPINDLESPEED_ADDR);
+    dataWritten += EepromWriteInt2(RD_SPINDLESPEED_ADDR,m->spindleSpeed);
     HAL_Delay(2);
-    dataWritten += EE_WriteInteger(m->tpi,RD_TPI_ADDR);
+    dataWritten += EepromWriteInt2(RD_TPI_ADDR,m->tpi);
     HAL_Delay(2);
-    dataWritten += EE_WriteInteger(m->packageHeight,RD_PACKAGE_HEIGHT_ADDR);
+    dataWritten += EepromWriteInt2(RD_PACKAGE_HEIGHT_ADDR,m->packageHeight);
     HAL_Delay(2);
-    dataWritten += EE_WriteInteger(m->windingClosenessFactor,RD_WINDINGCLOSENESSFACTOR_ADDR);
+    dataWritten += EepromWriteInt2(RD_WINDINGCLOSENESSFACTOR_ADDR,m->windingClosenessFactor);
     HAL_Delay(2);
-    dataWritten += EE_WriteInteger(m->windingOffsetCoils,RD_WINDINGOFFSET_COILS_ADDR);
+    dataWritten += EepromWriteInt2(RD_WINDINGOFFSET_COILS_ADDR,(uint16_t)(m->windingOffsetCoils * 100));
     HAL_Delay(2);
-    dataWritten += EE_WriteFloat(m->diaBuildFactor,RD_DIA_BUILD_FACTOR_ADDR);
+    dataWritten += EepromWriteInt2(RD_DIA_BUILD_FACTOR_ADDR,(uint16_t)(m->diaBuildFactor * 100));
     HAL_Delay(2);
     if (dataWritten == 8)
     	{return 0;}
@@ -61,10 +61,10 @@ uint8_t CheckMachineSettings(machineSettingsTypeDef* m){
 	if ((m->tpi > 30) || (m->tpi < 10)){
 		return 0;
 	}
-	if ((m->spindleSpeed > 12000) || (m->spindleSpeed < 6000)){
+	if ((m->spindleSpeed != 6000) && (m->spindleSpeed !=  8000) && (m->spindleSpeed !=  9000) && (m->spindleSpeed !=  10000)){
 		return 0;
 	}
-	if (m->packageHeight > 250 || (m->packageHeight < 50)){
+	if (m->packageHeight > 200 || (m->packageHeight < 50)){
 		return 0;
 	}
 	if ((m->windingClosenessFactor > 200) || (m->windingClosenessFactor < 50)){
@@ -89,4 +89,4 @@ void LoadDefaultMachineSettings(machineSettingsTypeDef* m){
 	m->windingOffsetCoils = DEFAULT_WINDINGOFFSET_COILS;
 	m->diaBuildFactor = DEFAULT_DIA_BUILD_FACTOR;
 }
-*/
+

@@ -30,9 +30,10 @@
 #include "logicDefines.h"
 #include "functionDefines.h"
 #include "eeprom.h"
+
 #include "VFD.h"
 #include "Control.h"
-#include "../../Drivers/Encoder/encoder.h"
+#include "encoder.h"
 #include "machineControl.h"
 
 /* USER CODE END Includes */
@@ -77,6 +78,7 @@ struct Diagnostics D;
 encoders encs;
 ringDoubler rd;
 machineSettingsTypeDef ms;
+machineSettingsTypeDef msUpdate;
 // HMI STRUCTS
 struct HMI_InfoBase hsb;
 struct HMI_RunPacket hrp;
@@ -110,18 +112,9 @@ int startFlag = 0;
 int pulseCount = 0;
 int pulseCount1 = 0; // Lift front
 int pulseCount2 = 0; // Lift Back
-int pulseCount3 = 0; // Lift front
-int pulseCount4 = 0; // Lift Back
-int bobbinBed_dir = 1;
-
-//variables for checking bed flatness
-extern int finalCountBedTimer;
-extern int leftMotorSlow;
-extern int rightMotorSlow;
 
 //machine States
 int homeFlag = 0; // flag to indicate to interrupt to switch on only 2 motors.
-
 
 //main running variables
 int currentLayer = 0;
@@ -144,12 +137,8 @@ int leftMotor_DC_Offset = 100;
 int filter1;
 //production variables
 
-float totalProduction_dt = 0.02;
-float totalProduction = 0.1;
 int doffPercent = 0;
 
-int RunLeft = 0;
-int RunRight = 0;
 //homing variables
 extern int rightMotorOn;
 extern int leftMotorOn;
@@ -208,7 +197,11 @@ uint8_t setVFD = 0;
 uint8_t spindleSpeed_in = 0;
 uint8_t startVFD = 0;
 uint8_t stopVFD = 0;
-uint16_t tim8=0;
+
+uint8_t settingsWritingError = 0;
+uint8_t settingsOK = 0;
+uint8_t spindleSpeedCode = 0;
+uint8_t dataWritten = 0;
 
 void Winding_RIGHT(int step,int length){ // for RIGHT SIDE
 	if(step >= 1){prescaler = 840000/step;}
@@ -233,7 +226,6 @@ void Binding_RIGHT(int step,int length){ // for RIGHT SIDE
 	if(pulseCount1 >= length){
 		pulseCount1 = 0;
 		directionChange = directionChange * -1;
-		chaseCount++;
 		rd.strokeNoRight++;
 	}
 }
@@ -349,7 +341,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  {
 
 	//50ms timer for running control loop.
 	if (htim->Instance==TIM8){
-		tim8++;
 		if(testMode == 1){
 			UpdateRPM(&encs);
 			if (D.typeofTest == HMI_DIAG_CLOSED_LOOP){
@@ -385,16 +376,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  {
 	   }
 	
 	   if (homeFlag == 1){
-		   if (RunRight == 1){
-			   if (homing_Normal_StateFront != OFF){
-				   Homing_RIGHT(100,300);
-			   }
+		   if (homing_Normal_StateFront != OFF){
+			   Homing_RIGHT(100,300);
 		   }
 
-		   if (RunLeft == 1){
-			   if (homing_Normal_StateBack != OFF){ // for back side
-				   Homing_LEFT(100,300);
-			   }
+		   if (homing_Normal_StateBack != OFF){ // for back side
+			   Homing_LEFT(100,300);
 		   }
 	   }
 				
@@ -429,44 +416,32 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)  {
 				}
 		}
 
-		if (RunRight == 1){
-			if (DoffOverRightHomingReached == 1){
-				__HAL_TIM_SetCompare(&htim5, TIM_CHANNEL_4,1);
-				HAL_TIM_PWM_Stop_IT(&htim5,TIM_CHANNEL_4);
-			} else{
-				if(directionChange == 1){
-					if(rd.bindingPps >=1){
-					Binding_RIGHT(rd.bindingPps,rd.bindingStrokePps);
-					}
-				}
-				if(directionChange == -1){
-					if(rd.windingPps >1){
-					Winding_RIGHT(rd.windingPps,rd.windingStrokePps);
-					}
-				}
+		//----handles right side stepper
+		if(directionChange == 1){
+			if(rd.bindingPps >=1){
+			Binding_RIGHT(rd.bindingPps,rd.bindingStrokePps);
+			}
+		}
+		if(directionChange == -1){
+			if(rd.windingPps >1){
+			Winding_RIGHT(rd.windingPps,rd.windingStrokePps);
 			}
 		}
 
-		// for the back side
-		if (RunLeft == 1){
-			if (DoffOverLeftHomingReached == 1){
-				__HAL_TIM_SetCompare(&htim13, TIM_CHANNEL_1,1);
-				HAL_TIM_PWM_Stop_IT(&htim13,TIM_CHANNEL_1);
-			}else{
-				if(directionChange1 == 1){
-					if(rd.bindingPps >=1){
-					Binding_LEFT(rd.bindingPps,rd.bindingStrokePps);
-					}
-				}
-				if(directionChange1 == -1){
-					if(rd.windingPps >1){
-						Winding_LEFT(rd.windingPps,rd.windingStrokePps);
-					}
-				}
+
+		//----handles left side stepper
+		if(directionChange1 == 1){
+			if(rd.bindingPps >=1){
+			Binding_LEFT(rd.bindingPps,rd.bindingStrokePps);
+			}
+		}
+		if(directionChange1 == -1){
+			if(rd.windingPps >1){
+				Winding_LEFT(rd.windingPps,rd.windingStrokePps);
 			}
 		}
 
-	   }
+	   } //closes allMotorsOn
 
 		if (allMotorsOn == 0){
 			//turn off the lifts
@@ -530,14 +505,19 @@ int main(void)
   InitializeStateStruct(); // sets state to idle and paired =0
   InitializeDiagnosticsStruct();
   InitializeUartStruct();
-  InitializeFlyerSettings();
-  ReadRFSettingsFromEeprom(); //UpdateFlyerFrameSettings from EEPROM
-  RunRight = fsp.rightSideOn;
-  RunLeft = fsp.leftSideOn;
-  InitializeUpdateFlyerSettings(); // just a struct to holdtheupdated values from the APP before we update the eeprom
-  ReadOldDoffSettingsFromEeprom();
 
-  //Setup the ms parameters
+  InitializeMachineSettings(&ms);
+  InitializeMachineSettings(&msUpdate);
+
+  //Read settings from Eeprom and check
+  ReadMachineSettingsFromEeprom(&ms);
+  settingsOK = CheckMachineSettings(&ms);
+  if(!settingsOK){
+	  LoadDefaultMachineSettings(&ms);
+	  settingsWritingError = WriteMachineSettingsIntoEeprom(&ms);
+  }
+  //Manual setup of machine params
+  /*
   ms.inputYarnCountNe = 30;
   ms.outputYarnDia = 0.31;
   ms.packageHeight = 200;
@@ -545,9 +525,12 @@ int main(void)
   ms.diaBuildFactor = 0.6;
   ms.tpi = 20;
   ms.windingClosenessFactor = 108;
-  ms.windingOffsetCoils = 1.5;
+  ms.windingOffsetCoils = 1.5;*/
 
-  VFD_setSpindleSpeed(&vfd, SPINDLE_SPEED_8000); //set this based on settings
+  //TODO later
+  //ReadOldDoffSettingsFromEeprom();
+  spindleSpeedCode =  getSpindleSpeedCode(ms.spindleSpeed);
+  VFD_setSpindleSpeed(&vfd, spindleSpeedCode); //set this based on settings
   SetupRDCalculations(&ms,&rd);
 	
 	//Initialize the HMI Structs
@@ -571,10 +554,6 @@ int main(void)
   //Init the Motor Struct
   MotorStructInit();
 	
-  	//STEPPER MOTORS
-	//HAL_GPIO_WritePin(GPIOA,STP1_EN_Pin,GPIO_PIN_RESET);
-	//HAL_GPIO_WritePin(GPIOE,STP2_EN_Pin,GPIO_PIN_RESET);
-
   /* USER CODE END 2 */
 
   /* Infinite loop */

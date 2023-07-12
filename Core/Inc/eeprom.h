@@ -1,6 +1,8 @@
 #ifndef __EEPROM_H
 #define __EEPROM_H
 
+#include "stdio.h"
+
 #define EEPROM_ADDRESS 0xAC
 
 #define DELIVERY_SPEED_ADDR 0X00
@@ -30,36 +32,15 @@
 #define FF_BOOSTFACTOR_ADDR 0X4D
 #define FF_BUCKFACTOR_ADDR 0X50
 
-#define RF_SPINDLE_SPEED_ADDR 0X40
-#define RF_TENSION_DRAFT_ADDR 0X44
-#define RF_TPI_ADDR 0X48
-#define RF_YARN_COUNT 0X4C
-#define RF_BIND_WIND_RATIO 0X50
-#define RF_CHASE_LENGTH 0X54
-#define RF_PREFERRED_PKG_SIZE 0X58	
-#define RF_RIGHT_ON 0X5C	
-#define RF_LEFT_ON 0X60
-
-
-#define RF_CURRENT_CHASE_COUNT 0X70
-#define RF_CURRENT_PULSECOUNT1 0X72
-#define RF_CURRENT_PULSECOUNT2 0X74
-#define RF_CURRENT_DIRECTION_LEFT 0X78
-#define RF_CURRENT_DIRECTION_RIGHT 0X82
-#define RF_SAVED_SETTINGS 0X86
 
 void EepromWriteInt(unsigned position,unsigned int data);
-unsigned int EepromReadInt(unsigned position);
+uint8_t EepromWriteInt2(unsigned position,unsigned int data);
+
 void EepromWriteFloat(unsigned position,float data);
+uint8_t EepromWriteFloat2(unsigned position,float data);
+
+unsigned int EepromReadInt(unsigned position);
 unsigned int EepromReadFloat(unsigned position);
-void WriteCardingSettingsIntoEeprom(void);
-void ReadCardingSettingsFromEeprom(void);
-void WriteDrawFrameSettingsIntoEeprom(void);
-void ReadDrawFrameSettingsFromEeprom(void);
-void WriteFlyerSettingsIntoEeprom(void);
-void ReadFlyerSettingsFromEeprom(void);
-void WriteRFSettingsIntoEeprom(void);
-void ReadRFSettingsFromEeprom(void);
-void ReadOldDoffSettingsFromEeprom(void);
+
 #endif /* __ENCODER_H */
 

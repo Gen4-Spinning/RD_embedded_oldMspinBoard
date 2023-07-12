@@ -2,8 +2,8 @@
 #define __HMIFNS_H
 
 #include "HMI_Constants.h"
+#include "machineControl.h"
 #include "Structs.h"
-
 
 struct HMI_InfoBase
 {
@@ -22,7 +22,7 @@ struct HMI_InfoBase
 
 struct HMI_RunPacket
 {
-		char tlv1Code;
+	char tlv1Code;
     char tlv1length;
     int tlv1_val;
     char tlv2Code;
@@ -70,14 +70,15 @@ void Create_HMI_StopPacket(void);
 void Create_HMI_DiagPacket(void);
 
 void UpdateBasePacket_Modes(char machineType,char msgType,char state,char runsubMode,char packetLength,char attributeCount);
-void UpdateRunPacket_RF(char tlv1Code,int tlv1Val,char tlv2Code,int tlv2Val);
+void UpdateRunPacket_RF(char tlv1Code,int tlv1Val,char tlv2Code,int tlv2Val,char tlv3Code,int tlv3Val);
 void UpdateStopPacket(char tlv1Code,char tlv2Code,char tlv3Code);
 
-int UpdateRunPacketString_RF(char *buffer,struct HMI_InfoBase hsb,struct HMI_RunPacket hrp,int spindleSpeed,int doffPercent);
+int UpdateRunPacketString_RF(char *buffer,struct HMI_InfoBase hsb,struct HMI_RunPacket hrp,int spindleSpeed,int leftdoffPercent,int rightdoffPercent);
 int UpdateStopPacketString(char *buffer,struct HMI_InfoBase hsb,struct HMI_StopPacket hsp,int stop_reason,int motor_fault,float error_val); // Continuously
 int UpdatePausePacketString(char *buffer,struct HMI_InfoBase hsb,struct HMI_StopPacket hsp,int stop_reason,int motor_fault,float error_val); //differnet fn bcos 00 needs to be sent as 00000000
 int UpdateDiagPacketString(char *buffer,struct HMI_InfoBase hsb,struct HMI_DiagPacket hdp,int typeOfTest,int motorID,int signalVoltage,int rpm);
-int HMI_GetRFSettingsAllPacketString(char *buffer,struct HMI_InfoBase hsb,struct FlyerSettings fsp);
+int HMI_GetRDSettingsAllPacketString(char *buffer,struct HMI_InfoBase hsb,machineSettingsTypeDef ms);
+
 int HMI_GetIdlePacketString(char *buffer,struct HMI_InfoBase hsb);
 int HMI_GetSettingsACKPacketString(char *buffer,struct HMI_InfoBase hsb);
 int HMI_Get_DiagOver_PacketString(char *buffer,struct HMI_InfoBase hsb,char status);

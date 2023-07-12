@@ -16,6 +16,20 @@
 
 #include "VFD.h"
 
+uint8_t getSpindleSpeedCode(uint16_t spindleSpeed){
+	if (spindleSpeed < 7000){
+		return SPINDLE_SPEED_6000;
+	}else if (spindleSpeed < 8500){
+		return SPINDLE_SPEED_8000;
+	}else if (spindleSpeed < 9500){
+		return SPINDLE_SPEED_9000;
+	}else if (spindleSpeed < 11000){
+		return SPINDLE_SPEED_10000;
+	}else{
+		return SPINDLE_SPEED_6000;
+	}
+	return SPINDLE_SPEED_6000;
+}
 
 void VFD_setSpindleSpeed(VFD *v,uint8_t spindlespeed_define){
 	v->VFD_setting = spindlespeed_define;

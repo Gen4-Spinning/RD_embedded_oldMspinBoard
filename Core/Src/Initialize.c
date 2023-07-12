@@ -33,29 +33,6 @@ void InitializeStateStruct(){
 	S.savedStateExists = 0;
 }
 
-void InitializeFlyerSettings(){
-    fsp.spindleSpeed = 8000;
-    fsp.draft = 32;
-    fsp.tpi = 24;
-    fsp.yarnCount= 20;
-    fsp.bindWindRatio = 2.5;
-    fsp.chaseLength = 1.5;
-    fsp.preferredPackageSize = 100;
-    fsp.rightSideOn = 1;
-    fsp.leftSideOn = 1;
-}
-
-void InitializeUpdateFlyerSettings(){
-    ufsp.spindleSpeed = 8000;
-    ufsp.draft = 32;
-    ufsp.tpi = 24;
-    ufsp.yarnCount= 20;
-    ufsp.bindWindRatio = 2.5;
-    ufsp.chaseLength = 1.5;
-    ufsp.preferredPackageSize = 100;
-    ufsp.rightSideOn = 1;
-    ufsp.leftSideOn = 1;
- };
 
 void InitializeUartStruct()
 {

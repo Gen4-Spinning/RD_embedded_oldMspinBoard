@@ -398,7 +398,7 @@ if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) == SET)
 				//update the transmit buffer with the Settings Data
 				UpdateBasePacket_Modes(CURRENT_MACHINE,HMI_BG_DATA,HMI_SETTINGS_INFO,NO_VAR,HMI_SETTINGS_PACKET_LEN_RF,1);
 				// transmit packet size is a global. always need to update before we run
-				sizeofPacket =HMI_GetRFSettingsAllPacketString(BufferTransmit,hsb, fsp); 
+				sizeofPacket =HMI_GetRDSettingsAllPacketString(BufferTransmit,hsb, ms);
 				
 				HAL_UART_Transmit_IT(&huart1, (uint8_t *)&BufferTransmit, sizeofPacket);
 				U.TXcomplete = 0;
@@ -429,11 +429,12 @@ if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE) == SET)
 				  S.state_change = TO_DIAG;
 			 }
 			 
-			 // will be processed inside the Settings state Fn
+			 // will be processed inside the Settings state Fn- THINK FOR CARDING
 			 if ((int)msgType == FROM_HMI_UPDATED_SETTINGS)
 			 {
 				 S.state_change = TO_UPDATE_SETTINGS;
 			 }
+
 			 // will go back to idle settings from settings or diagnostics page
 			 if ((int)msgType == FROM_HMI_BACK_TO_IDLE)
 			 {

@@ -91,5 +91,39 @@ void SetupRDCalculations(machineSettingsTypeDef *ms,ringDoubler *rd){
 
 	rd->maxBobbinDia = rd->strokesPerDoff * 2 * windingClosenessFactor_float * ms->outputYarnDia + AVERAGE_BOBBIN_DIA;
 	rd->strokeNoLeft = 0;
+	rd->doffPercentLeft = 0;
+
 	rd->strokeNoRight = 0;
+	rd->doffPercentRight = 0;
+}
+
+uint8_t LeftDoffOver(ringDoubler *rd){
+	if (rd->strokeNoLeft < rd->strokesPerDoff){
+		rd->doffPercentLeft = (float)(rd->strokeNoLeft)*100.0/rd->strokesPerDoff;
+		return 0;
+	}else{
+		rd->doffPercentLeft = 100;
+		return 1;
+	}
+}
+uint8_t RightDoffOver(ringDoubler *rd){
+	if (rd->strokeNoRight < rd->strokesPerDoff){
+		rd->doffPercentRight = (float)((rd->strokeNoRight)*100.0)/rd->strokesPerDoff;
+		return 0;
+	}else{
+		rd->doffPercentRight = 100;
+		return 1;
+	}
+}
+
+
+void InitializeMachineSettings(machineSettingsTypeDef *ms){
+	ms->inputYarnCountNe = 30;
+	ms->outputYarnDia = 0.31;
+	ms->spindleSpeed = 8000;
+	ms->tpi = 20;
+	ms->packageHeight = 200;
+	ms->diaBuildFactor = 0.6;
+	ms->windingClosenessFactor = 108;
+	ms->windingOffsetCoils = 1.5;
 }

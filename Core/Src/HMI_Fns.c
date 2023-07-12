@@ -7,6 +7,7 @@
 #include "CommonConstants.h"
 #include "stm32f4xx_hal.h"
 #include "stdio.h"
+#include "machineControl.h"
 
 extern int pulseCount1;
 extern int pulseCount2;
@@ -74,7 +75,7 @@ void UpdateBasePacket_Modes(char machineType,char msgType,char state,char runsub
     hsb.attributeCount = attributeCount;
 }
 
-void UpdateRunPacket_RF(char tlv1Code,int tlv1Val,char tlv2Code,int tlv2Val)
+void UpdateRunPacket_RF(char tlv1Code,int tlv1Val,char tlv2Code,int tlv2Val,char tlv3Code,int tlv3Val)
 {
     hrp.tlv1Code = tlv1Code;
     hrp.tlv1length = 2;
@@ -82,6 +83,9 @@ void UpdateRunPacket_RF(char tlv1Code,int tlv1Val,char tlv2Code,int tlv2Val)
     hrp.tlv2Code = tlv2Code;
     hrp.tlv2length = 2;
     hrp.tlv2_val = tlv2Val;  
+    hrp.tlv3Code = tlv3Code;
+    hrp.tlv3length = 2;
+    hrp.tlv3_val = tlv3Val;
 }
 
 void UpdateStopPacket(char tlv1Code,char tlv2Code,char tlv3Code)
@@ -89,17 +93,17 @@ void UpdateStopPacket(char tlv1Code,char tlv2Code,char tlv3Code)
     hsp.tlv1Code = tlv1Code;
     hsp.tlv2Code = tlv2Code;
     hsp.tlv3Code = tlv3Code;
-		hsp.tlv3length = 2;
+	hsp.tlv3length = 2;
 		
 }
 
-int UpdateRunPacketString_RF(char *buffer,struct HMI_InfoBase hsb,struct HMI_RunPacket hrp,int spindleSpeed,int doffPercent)
+int UpdateRunPacketString_RF(char *buffer,struct HMI_InfoBase hsb,struct HMI_RunPacket hrp,int spindleSpeed,int leftdoffPercent,int rightdoffPercent)
 {    int sizeofPacket = 0;
 
-     sprintf(buffer,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%04X%02X%02X%04X%02X\r",hsb.start,hsb.sender,hsb.packetLength,
+     sprintf(buffer,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%04X%02X%02X%04X%02X%02X%04X%02X\r",hsb.start,hsb.sender,hsb.packetLength,
 		 hsb.machineID,hsb.machineType,hsb.msgType,hsb.nextscreen,hsb.screen_substate,hsb.attributeCount,hrp.tlv1Code,
-		 hrp.tlv1length,spindleSpeed,hrp.tlv2Code,hrp.tlv2length,doffPercent,hsb.endChar);
-		 sizeofPacket = 37;
+		 hrp.tlv1length,spindleSpeed,hrp.tlv2Code,hrp.tlv2length,leftdoffPercent,hrp.tlv3Code,hrp.tlv3length,rightdoffPercent,hsb.endChar);
+		 sizeofPacket = 45;
   
     return sizeofPacket;
 }
@@ -130,13 +134,13 @@ int UpdatePausePacketString(char *buffer,struct HMI_InfoBase hsb,struct HMI_Stop
 }
 
 
-int HMI_GetRFSettingsAllPacketString(char *buffer,struct HMI_InfoBase hsb,struct FlyerSettings fsp)
+int HMI_GetRDSettingsAllPacketString(char *buffer,struct HMI_InfoBase hsb,machineSettingsTypeDef ms)
 { int sizeofPacket = 0;
-  sprintf(buffer,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02d%04X%04X%04X%04X%X%X%04X%04X%04X%02X\r",hsb.start,hsb.sender,
+  sprintf(buffer,"%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02d%04X%X%04X%04X%04X%X%04X%X%02X\r",hsb.start,hsb.sender,
          hsb.packetLength,hsb.machineID,hsb.machineType,hsb.msgType,hsb.nextscreen,hsb.screen_substate,hsb.attributeCount,
-         HMI_RF_ALL_SETTING_CODE,HMI_RF_ALL_SETTINGS_PKT_LEN,fsp.yarnCount,fsp.spindleSpeed,fsp.draft,
-				fsp.tpi,*(unsigned int*)&fsp.bindWindRatio,*(unsigned int*)&fsp.chaseLength,fsp.preferredPackageSize,
-					fsp.rightSideOn,fsp.leftSideOn,hsb.endChar);
+         HMI_RF_ALL_SETTING_CODE,HMI_RF_ALL_SETTINGS_PKT_LEN,ms.inputYarnCountNe,*(unsigned int*)&ms.outputYarnDia,ms.spindleSpeed,
+				ms.tpi,ms.packageHeight,*(unsigned int*)&ms.diaBuildFactor,ms.windingClosenessFactor,
+				*(unsigned int*)&ms.windingOffsetCoils,hsb.endChar);
   sizeofPacket = 69;
   return sizeofPacket;
 }
@@ -234,17 +238,15 @@ char HMI_BasePacket_Decode(char *receiveBuffer)
 	char msgInfo[2];
 	char disable_start_msg [2];
 	//settings
-  char spindleSpeed [4];
-  char draft [8];
-  char tpi[8];
-  char yarnCount[4];
-  char bindWindRatio[8] ;
-  char chaseLength[8];
-  char preferredPackageSize[4];
-	char rightSideOn[4];
-	char leftSideOn[4];
+	char yarnCount[4];
+	char outputYarnDia[8] ;
+	char spindleSpeed [4];
+	char tpi[4];
+	char packageHeight[4];
+	char diaBuildFactor [8];
+	char windingOffsetCoils[8];
+	char windingClosenessFactor[4];
 
-	
 	char motorID[4];
 	char typeOfTest[4];
 	char targetRPM[4];
@@ -254,25 +256,22 @@ char HMI_BasePacket_Decode(char *receiveBuffer)
 	//decoded
 	//char hex_machineID;
 	//char hex_machineType;
-	
 	int hex_disable_start_msg;
 
-	
 	//settings
-	unsigned int hexSpindleSpeed;
-	unsigned int hex_draft ;
-	unsigned int hex_tpi ;
 	unsigned int hex_yarnCount ;
-	unsigned long hex_bindWindRatio ;
-  unsigned long hex_chaseLength ;
-	unsigned int hex_preferredPackageSize ;
-	unsigned int hex_rightSideOn;
-	unsigned int hex_leftSideOn;
+	unsigned long hex_outputYarnDia ;
+	unsigned int hexSpindleSpeed;
+	unsigned int hex_tpi ;
+	unsigned int hex_packageHeight ;
+    unsigned long hex_diaBuildFactor ;
+	unsigned int hex_windingClosenessFactor ;
+	unsigned long hex_windingOffsetCoils;
 	
-	float bindWindRatio_F;
-	float chaseLength_F;
+	float outputYarnDia_F;
+	float diaBuildFactor_F;
+	float windingOffetCoils_F;
 
-	
 	//diag
 	unsigned int	D_motorID ;
 	unsigned int  D_typeOfTest ;
@@ -324,38 +323,36 @@ char HMI_BasePacket_Decode(char *receiveBuffer)
 
 			//delivery speed comes as float, but we make it int
 			strncpy(yarnCount,receiveBuffer+22,4);
-			strncpy(spindleSpeed,receiveBuffer+26,4);
-			strncpy(draft,receiveBuffer+30,4);
-			strncpy(tpi,receiveBuffer+34,4);
-			strncpy(bindWindRatio,receiveBuffer+38,8);
-			strncpy(chaseLength	,receiveBuffer+46,8);
-			strncpy(preferredPackageSize	,receiveBuffer+54,4);
-			strncpy(rightSideOn	,receiveBuffer+58,4);
-			strncpy(leftSideOn	,receiveBuffer+62,4);
-			
-			hexSpindleSpeed = stringToINT(spindleSpeed);
-			hex_draft = stringToINT(draft);
-			hex_tpi = stringToINT(tpi);
-			hex_yarnCount= stringToINT(yarnCount);
-			hex_bindWindRatio = stringToFLOAT(bindWindRatio);
-			hex_chaseLength = stringToFLOAT(chaseLength);
-			hex_preferredPackageSize = stringToINT(preferredPackageSize);
-			hex_rightSideOn = stringToINT(rightSideOn);
-			hex_leftSideOn = stringToINT(leftSideOn);
+			strncpy(outputYarnDia,receiveBuffer+26,8);
+			strncpy(spindleSpeed,receiveBuffer+34,4);
+			strncpy(tpi,receiveBuffer+38,4);
+			strncpy(packageHeight,receiveBuffer+42,4);
+			strncpy(diaBuildFactor,receiveBuffer+46,8);
+			strncpy(windingClosenessFactor,receiveBuffer+54,4);
+			strncpy(windingOffsetCoils,receiveBuffer+58,8);
 
-			bindWindRatio_F = *((float*)&hex_bindWindRatio);
-			chaseLength_F = *((float*)&hex_chaseLength);
+			hex_yarnCount = stringToINT(yarnCount);
+			hex_outputYarnDia = stringToFLOAT(outputYarnDia);
+			hexSpindleSpeed = stringToINT(spindleSpeed);
+			hex_tpi = stringToINT(tpi);
+			hex_packageHeight = stringToINT(packageHeight);
+			hex_diaBuildFactor = stringToFLOAT(diaBuildFactor);
+			hex_windingClosenessFactor = stringToINT(windingClosenessFactor);
+			hex_windingOffsetCoils = stringToFLOAT(windingOffsetCoils);
+
+			outputYarnDia_F = *((float*)&hex_outputYarnDia);
+			diaBuildFactor_F = *((float*)&hex_diaBuildFactor);
+			windingOffetCoils_F = *((float*)&hex_windingOffsetCoils);
 
 			//update ucsp
-			ufsp.spindleSpeed = hexSpindleSpeed;
-			ufsp.draft = hex_draft;
-			ufsp.tpi = hex_tpi;
-			ufsp.yarnCount = hex_yarnCount;
-			ufsp.bindWindRatio = bindWindRatio_F;
-			ufsp.chaseLength = chaseLength_F;
-			ufsp.preferredPackageSize = hex_preferredPackageSize;
-			ufsp.rightSideOn = hex_rightSideOn;
-			ufsp.leftSideOn = hex_leftSideOn;
+			msUpdate.inputYarnCountNe = hex_yarnCount;
+			msUpdate.outputYarnDia = outputYarnDia_F;
+			msUpdate.spindleSpeed = hexSpindleSpeed;
+			msUpdate.tpi = hex_tpi;
+			msUpdate.packageHeight = hex_packageHeight;
+			msUpdate.diaBuildFactor = diaBuildFactor_F;
+			msUpdate.windingClosenessFactor = hex_windingClosenessFactor;
+			msUpdate.windingOffsetCoils = windingOffetCoils_F;
 			
 			return FROM_HMI_UPDATED_SETTINGS;
 		}

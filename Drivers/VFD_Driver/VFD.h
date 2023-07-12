@@ -33,6 +33,6 @@ extern VFD vfd;
 void VFD_setSpindleSpeed(VFD *v,uint8_t spindlespeed_define);
 void VFD_startInductionMotor(VFD *v);
 void VFD_stopInductionMotor(VFD *v);
-
+uint8_t getSpindleSpeedCode(uint16_t spindleSpeed);
 
 #endif /* VFD_DRIVER_VFD_H_ */

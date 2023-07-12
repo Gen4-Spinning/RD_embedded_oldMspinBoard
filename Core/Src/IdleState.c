@@ -24,8 +24,6 @@ int hommingFlag = 1 ; //flag to tell idle to go to homing onfirst key press
 int machineRun = 0; //flag to tell idle to go to run state
 HAL_StatusTypeDef returnVal;
 int count = 0;
-extern int RunLeft;
-extern int RunRight;
 int resetDirections = 0;
 extern int pulseCount1;
 extern int pulseCount2;
@@ -63,9 +61,6 @@ void IdleState(void)
 			U.TXtransfer = 0;
 		}
 						
-		RunRight = 1;
-		RunLeft = 1;
-
 		/*********MOTOR LOGIC************/
 		/*If there doesnt exist any currently saved state with which you can continue,
 			force the RD to go into homing state */
@@ -111,8 +106,8 @@ void IdleState(void)
 				pulseCount2 = 0;
 				currentLayer = 0;
 			}
-			// write Zero into the savedState
-			EepromWriteInt(RF_SAVED_SETTINGS,0);
+			//TODO : write Zero into the savedState
+			//EepromWriteInt(RF_SAVED_SETTINGS,0);
 						
 			S.state_change = TO_RUN;
 			S.current_state =  RUN_STATE;

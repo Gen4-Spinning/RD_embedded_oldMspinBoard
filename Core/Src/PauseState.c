@@ -89,7 +89,6 @@ void PauseState(void)
 		keypress = Pushbutton();
 		if ((keypress==1) && (S.keyState == ENABLE_KEYPRESS)){
 
-			VFD_setSpindleSpeed(&vfd, SPINDLE_SPEED_8000);
 			VFD_startInductionMotor(&vfd);
 
 			S.state_change = TO_RUN;

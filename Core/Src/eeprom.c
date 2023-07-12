@@ -37,8 +37,44 @@ void EepromWriteInt(unsigned position,unsigned int data)
 		HAL_I2C_Mem_Write(&hi2c3,EEPROM_ADDRESS, position+1,0xFF,(uint8_t*)&data,1,1);
 		HAL_Delay(5);
 	}
-
 }
+
+uint8_t EepromWriteInt2(unsigned position,unsigned int data)
+{
+	int count = 0;
+	if (data>255)
+	{
+		while(data>255)
+		{
+			data = data-255;
+			count++;
+		}
+	}
+
+	if(count>0)
+	{
+		HAL_I2C_Mem_Write(&hi2c3,EEPROM_ADDRESS, position,0xFF,(uint8_t*)&count,1,1);
+		HAL_Delay(5);
+		HAL_I2C_Mem_Write(&hi2c3,EEPROM_ADDRESS, position+1,0xFF,(uint8_t*)&data,1,1);
+		HAL_Delay(5);
+	}
+	else
+	{
+		HAL_I2C_Mem_Write(&hi2c3,EEPROM_ADDRESS, position,0xFF,(uint8_t*)&count,1,1);
+		HAL_Delay(5);
+		HAL_I2C_Mem_Write(&hi2c3,EEPROM_ADDRESS, position+1,0xFF,(uint8_t*)&data,1,1);
+		HAL_Delay(5);
+	}
+
+	HAL_StatusTypeDef OK = HAL_I2C_IsDeviceReady(&hi2c3, EEPROM_ADDRESS, 20, 200);
+	if (OK == HAL_OK){
+		return 1;
+	}else{
+		return 0;
+	}
+}
+
+
 
 unsigned int EepromReadInt(unsigned position)
 {
@@ -90,6 +126,55 @@ void EepromWriteFloat(unsigned position,float data)
 }
 
 
+uint8_t EepromWriteFloat2(unsigned position,float data)
+{
+	uint8_t datawritten = 0;
+	unsigned int data_in = 0;
+	int count3 = 0;
+	int count2 = 0;
+	int count1 = 0;
+	data_in =  *(unsigned int*)&data;
+	if (data_in>16777216)
+	{
+		while(data_in>16777216)
+		{
+			data_in = data_in-16777216;
+			count3++;
+		}
+	}
+		if (data_in>65536)
+	{
+		while(data_in>65536)
+		{
+			data_in = data_in-65536;
+			count2++;
+		}
+	}
+	if (data_in>255)
+	{
+		while(data_in>255)
+		{
+			data_in = data_in-255;
+			count1++;
+		}
+	}
+
+	datawritten += EepromWriteInt2(position,count3);
+	datawritten += EepromWriteInt2(position+2,count2);
+	datawritten += EepromWriteInt2(position+4,count1);
+	datawritten += EepromWriteInt2(position+6,data_in);
+
+	if (datawritten == 4){
+		return 1;
+	}else{
+		return 0;
+	}
+	return 0;
+}
+
+
+
+
 unsigned int EepromReadFloat(unsigned position)
 {
 	long data = 0;
@@ -104,64 +189,8 @@ unsigned int EepromReadFloat(unsigned position)
 	data = count0_in+(count1_in*255)+(count2_in*65536)+(count3_in*16777216);
 	return data;  //data has to be converted to float use this *(float*)&data
 }
+
 /*
-void ReadCardingSettingsFromEeprom(void)
-{
-	long data_out = 0;
-	csp.deliverySpeed = EepromReadInt(DELIVERY_SPEED_ADDR);
-	data_out = EepromReadInt(TENSION_DRAFT_ADDR);
-	csp.tensionDraft= ((float)data_out)/(float)100;
-	csp.cylinderSpeed = EepromReadInt(CYLINDER_SPEED_ADDR);
-	data_out = EepromReadInt(CYLINDER_FEED_ADDR);
-	csp.cylinderFeed= ((float)data_out)/(float)100;
-	csp.beaterSpeed = EepromReadInt(BEATER_SPEED_ADDR);
-	data_out = EepromReadInt(BEATER_FEED_ADDR);
-	csp.beaterFeed = ((float)data_out)/(float)100;
-	csp.conveyorSpeed = EepromReadInt(CONVEYOR_SPEED_ADDR);
-	csp.conveyorDelay = EepromReadInt(CONVEYOR_DELAY_ADDR);
-	csp.conveyorDwell = EepromReadInt(CONVEYOR_DWELL_ADDR);
-	
-}
-
-void WriteCardingSettingsIntoEeprom(void)
-{
-
-	EepromWriteInt(DELIVERY_SPEED_ADDR,csp.deliverySpeed);
-	EepromWriteInt(TENSION_DRAFT_ADDR,(int)(csp.tensionDraft*100));
-	EepromWriteInt(CYLINDER_SPEED_ADDR,csp.cylinderSpeed);
-	EepromWriteInt(CYLINDER_FEED_ADDR,(int)(csp.cylinderFeed*100));
-	EepromWriteInt(BEATER_SPEED_ADDR,csp.beaterSpeed);
-	EepromWriteInt(BEATER_FEED_ADDR,(int)(csp.beaterFeed*100));
-	EepromWriteInt(CONVEYOR_SPEED_ADDR,csp.conveyorSpeed);
-	EepromWriteInt(CONVEYOR_DELAY_ADDR,csp.conveyorDelay);
-	EepromWriteInt(CONVEYOR_DWELL_ADDR,csp.conveyorDwell);
-
-}
-
-
-void ReadDrawFrameSettingsFromEeprom(void)
-{
-	long data_out = 0;
-	dsp.deliverySpeed = EepromReadInt(DF_DELIVERY_SPEED_ADDR);
-	data_out = EepromReadInt(DF_TENSION_DRAFT_ADDR);
-	dsp.tensionDraft= ((float)data_out)/(float)100;
-	dsp.lengthLimit = EepromReadInt(DF_LENGTHLIMIT_ADDR);
-}
-
-void WriteDrawFrameSettingsIntoEeprom(void)
-{
-
-	EepromWriteInt(DF_DELIVERY_SPEED_ADDR,dsp.deliverySpeed);
-	EepromWriteInt(DF_TENSION_DRAFT_ADDR,(int)(dsp.tensionDraft*100));
-	EepromWriteInt(DF_LENGTHLIMIT_ADDR,dsp.lengthLimit);
-
-}
-*/
-
-void ReadFlyerSettingsFromEeprom(void)
-{
-}
-
 void ReadRFSettingsFromEeprom(void)
 {
 	long data_out = 0;
@@ -184,11 +213,6 @@ void ReadRFSettingsFromEeprom(void)
 	fsp.rightSideOn = EepromReadInt(RF_RIGHT_ON);
 	
 	fsp.leftSideOn= EepromReadInt(RF_LEFT_ON);	
-
-}
-
-void WriteFlyerSettingsIntoEeprom(void)
-{
 
 }
 
@@ -221,3 +245,4 @@ void ReadOldDoffSettingsFromEeprom(void)
 	}
 	S.savedStateExists = EepromReadInt(RF_SAVED_SETTINGS);
 }
+*/

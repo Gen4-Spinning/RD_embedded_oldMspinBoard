@@ -7,7 +7,7 @@
 #include "functionDefines.h"
 #include "logicDefines.h"
 #include "VFD.h"
-
+#include "machineControl.h"
 #include "../../Drivers/Encoder/encoder.h"
 
 extern UART_HandleTypeDef huart1;
@@ -27,25 +27,10 @@ extern int currentLayer;
 extern int homeFlag;
 extern int pulseCount1;
 extern int pulseCount2;
-extern float totalProduction;
-extern int doffPercent;
-extern unsigned int chaseCount;
-extern float  strokesPerDoff;
-extern int actualSpindleSpeed;
 
-char sliverCut = 0;
-char out = 0;
-char liftlimitChk =0;
+uint8_t leftFinished = 0;
+uint8_t rightFinished = 0;
 
-
-//LAst doffing
-int doffOver = 0;
-int btm_bed_reachedRight = 0;
-int DoffOverRightHomingReached = 0;
-	
-int btm_bed_reachedLeft = 0;
-int DoffOverLeftHomingReached = 0;
-				
 void RunState(void){
 	char keyPress = 0;
 	char sizeofPacket = 0;
@@ -53,8 +38,8 @@ void RunState(void){
 		/******************COMMUNICATION**************/
 		if (S.first_enter ==1){
 			// prepare the Run packet Structure for the HMI
-			UpdateBasePacket_Modes(CURRENT_MACHINE,HMI_SCREEN_DATA,HMI_RUN_SCREEN,HMI_RUN_NORMAL,HMI_RUN_PACKET_LENGTH_RF,2);
-			UpdateRunPacket_RF(HMI_RF_SPINDLESPEED,fsp.spindleSpeed,HMI_RF_DOFFPERCENT,doffPercent);
+			UpdateBasePacket_Modes(CURRENT_MACHINE,HMI_SCREEN_DATA,HMI_RUN_SCREEN,HMI_RUN_NORMAL,HMI_RUN_PACKET_LENGTH_RF,3);
+			UpdateRunPacket_RF(HMI_RF_SPINDLESPEED,vfd.presentRPM,HMI_RD_LEFT_DOFFPERCENT,rd.doffPercentLeft,HMI_RD_RIGHT_DOFFPERCENT,rd.doffPercentRight);
 
 			TowerLamp(GREEN_ON); // GREEN ON
 			TowerLamp(AMBER_OFF); // AMBER OFF
@@ -73,7 +58,7 @@ void RunState(void){
 
 		//send Run packet
 		if ((U.TXcomplete ==1) && (U.TXtransfer == 1)){
-			sizeofPacket = UpdateRunPacketString_RF(BufferTransmit,hsb,hrp,actualSpindleSpeed,doffPercent);
+			sizeofPacket = UpdateRunPacketString_RF(BufferTransmit,hsb,hrp,vfd.presentRPM,rd.doffPercentLeft,rd.doffPercentRight);
 			HAL_UART_Transmit_IT(&huart1, (uint8_t *)&BufferTransmit, sizeofPacket);
 			U.TXcomplete = 0;
 			U.TXtransfer = 0;
@@ -84,7 +69,6 @@ void RunState(void){
 		if (S.firstSwitchon == 1){
 
 			/* turn on the VFD */
-			VFD_setSpindleSpeed(&vfd, SPINDLE_SPEED_8000);
 			VFD_startInductionMotor(&vfd);
 
 			ResetSecondaryMotor();
@@ -128,55 +112,41 @@ void RunState(void){
 			HAL_Delay(200);
 			break;
 		}
-			
 				
 		/* if all layers over */
-		/*if (doffOver != 1 ) {
-			//TODO - uncomment this
-			out = MaxLayerComplete();
-			if (out == 1){
-				doffOver = 1;
-			}
-		}*/
+		leftFinished = LeftDoffOver(&rd);
+		rightFinished = RightDoffOver(&rd);
+		//TODO send both doff percents
 
-			if (doffOver == 1){
-			   // just pause and then halt.
-				if (allMotorsOn == 1){
-					startFlag = 0;
-					stopSecondaryMotor = 1;
-				}
-				else{//go to halt
-					DoffOverRightHomingReached = 1;
-					DoffOverLeftHomingReached = 1;
-					E.RpmErrorFlag = 1;
-					S.errStopReason = ERR_LAYERS_COMPLETE;
-					S.errStopReasonHMI = ERR_LAYERS_COMPLETE;
-					S.errmotorFault = NO_VAR;
-					S.errVal = NO_VAR;
-				}
+		if ((leftFinished == 1) || (rightFinished == 1)){
+		   // just pause both sides and then halt.
+			if (allMotorsOn == 1){
+				startFlag = 0;
+				stopSecondaryMotor = 1;
 			}
+			else{//go to halt
+				E.RpmErrorFlag = 1;
+				S.errStopReason = ERR_LAYERS_COMPLETE;
+				S.errStopReasonHMI = ERR_LAYERS_COMPLETE;
+				S.errmotorFault = NO_VAR;
+				S.errVal = NO_VAR;
+			}
+		}
 						
+		//Check for RPM ERROR, to go into halt State
+		if (E.RpmErrorFlag == 1){
+			S.state_change = TO_HALT;
+			S.current_state = HALT_STATE;
+			S.prev_state = RUN_STATE;
 
-			//Calculate doff Percent
-			if (doffOver != 1){
-				doffPercent = (int)((chaseCount*100) / (strokesPerDoff*2));
-			}else{
-				doffPercent = 100;
-			}
+			S.first_enter = 1;
+			S.oneTimeflag = 0;
+			HAL_TIM_Base_Stop_IT(&htim7);
+			__HAL_TIM_SetAutoreload(&htim7,8400); //back to one sec timer
+			HAL_Delay(200);
+			break;
+		}
 
-				//Check for RPM ERROR, to go into halt State
-			if (E.RpmErrorFlag == 1){
-				S.state_change = TO_HALT;
-				S.current_state = HALT_STATE;
-				S.prev_state = RUN_STATE;
-																
-				S.first_enter = 1;
-				S.oneTimeflag = 0;
-				HAL_TIM_Base_Stop_IT(&htim7);
-				__HAL_TIM_SetAutoreload(&htim7,8400); //back to one sec timer
-				HAL_Delay(200);
-				break;
-			}
 	} // closes while
 }
 

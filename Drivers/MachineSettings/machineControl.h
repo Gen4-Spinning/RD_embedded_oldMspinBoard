@@ -72,9 +72,14 @@ typedef struct ringDoublerParameters{
 	float maxBobbinDia;
 	uint16_t strokeNoLeft;
 	uint16_t strokeNoRight;
+
+	uint8_t doffPercentLeft;
+	uint8_t doffPercentRight;
+
 }ringDoubler;
 
 extern machineSettingsTypeDef ms;
+extern machineSettingsTypeDef msUpdate;
 extern ringDoubler rd;
 
 float CalculateYarnDia(int yarnCount);
@@ -82,5 +87,12 @@ float ConvertYarnUnits(int input,int conversion);
 void SetupRDCalculations(machineSettingsTypeDef *ms,ringDoubler *rd);
 void ContinuousRDCalculations(machineSettingsTypeDef *ms,ringDoubler *rd);
 
+void InitializeMachineSettings(machineSettingsTypeDef *ms);
+uint8_t CheckMachineSettings(machineSettingsTypeDef* m);
+uint8_t WriteMachineSettingsIntoEeprom(machineSettingsTypeDef *m);
+void LoadDefaultMachineSettings(machineSettingsTypeDef* m);
+void ReadMachineSettingsFromEeprom(machineSettingsTypeDef *m);
 
+uint8_t LeftDoffOver(ringDoubler *rd);
+uint8_t RightDoffOver(ringDoubler *rd);
 #endif /* MACHINECONTROL_H_ */
