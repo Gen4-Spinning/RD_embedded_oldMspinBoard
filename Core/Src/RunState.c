@@ -121,6 +121,7 @@ void RunState(void){
 		if ((leftFinished == 1) || (rightFinished == 1)){
 		   // just pause both sides and then halt.
 			if (allMotorsOn == 1){
+				VFD_stopInductionMotor(&vfd);
 				startFlag = 0;
 				stopSecondaryMotor = 1;
 			}
